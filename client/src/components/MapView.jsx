@@ -114,15 +114,9 @@ export default function MapView({
     }
   }, [selectedIncident]);
 
-  const tileUrls = {
-    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    streets: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-  };
-
-  const tileAttributions = {
-    dark: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    streets: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  };
+  // Open-source standard OpenStreetMap tiles (no API key / no watermark)
+  const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
   return (
     <div className="relative flex-1 h-full w-full bg-slate-950 overflow-hidden">
@@ -130,15 +124,15 @@ export default function MapView({
         center={[20, 0]}
         zoom={2.5}
         minZoom={2}
-        maxZoom={18}
+        maxZoom={19}
         scrollWheelZoom={true}
-        className="h-full w-full z-10"
+        className={`h-full w-full z-10 ${baseMap === 'dark' ? 'dark-map-tiles' : ''}`}
         worldCopyJump={true}
       >
         <TileLayer
           key={baseMap}
-          url={tileUrls[baseMap]}
-          attribution={tileAttributions[baseMap]}
+          url={OSM_TILE_URL}
+          attribution={OSM_ATTRIBUTION}
           maxZoom={19}
         />
 
@@ -298,7 +292,7 @@ export default function MapView({
           title="Toggle Map Style"
         >
           <Layers className="w-4 h-4 text-sky-400" />
-          <span className="hidden sm:inline">{baseMap === 'dark' ? 'Dark Map' : 'Street Map'}</span>
+          <span className="hidden sm:inline">{baseMap === 'dark' ? 'Dark View' : 'Standard View'}</span>
         </button>
       </div>
 

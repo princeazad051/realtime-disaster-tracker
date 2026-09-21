@@ -24,6 +24,7 @@ app.use(cors({
     // Permissive callback in case Vercel preview domains are used
     return callback(null, true);
   },
+  credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

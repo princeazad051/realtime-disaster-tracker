@@ -40,7 +40,7 @@ graph TD
 
     subgraph "Frontend Client (React / Vite / Tailwind)"
         UI["AegisWatch Command Center<br/>(Port 3000)"]
-        Map["React-Leaflet MapView<br/>(Dark Matter / CartoDB)"]
+        Map["React-Leaflet MapView<br/>(OpenStreetMap)"]
         Sidebar["Sidebar Controls<br/>(Filters, Slider, Live Feed)"]
         Header["Status Bar & TTL Counter"]
         UI --> Map
