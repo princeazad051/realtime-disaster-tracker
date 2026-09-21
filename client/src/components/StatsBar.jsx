@@ -3,7 +3,7 @@ import { ShieldAlert, AlertTriangle, Activity, Flame, Zap, Gauge } from 'lucide-
 
 export default function StatsBar({ stats, cacheInfo, incidentsCount }) {
   return (
-    <div className="h-10 bg-surface-950/95 border-t border-slate-800/80 px-4 flex items-center justify-between text-xs text-slate-400 select-none overflow-x-auto whitespace-nowrap z-20">
+    <div className="h-10 bg-surface-950/95 px-4 flex items-center justify-between text-xs text-slate-400 select-none overflow-x-auto whitespace-nowrap z-20">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
           <span className="text-slate-500 font-mono uppercase text-[10px]">Active Events:</span>

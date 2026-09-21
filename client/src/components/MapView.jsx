@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { deduplicateIncidents } from '../utils/deduplicate';
 import {
   ExternalLink,
   MapPin,
@@ -118,6 +119,11 @@ export default function MapView({
   const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
+  // Ensure each incident displays exactly once
+  const uniqueIncidents = useMemo(() => {
+    return deduplicateIncidents(incidents);
+  }, [incidents]);
+
   return (
     <div className="relative flex-1 h-full w-full bg-slate-950 overflow-hidden">
       <MapContainer
@@ -125,15 +131,19 @@ export default function MapView({
         zoom={2.5}
         minZoom={2}
         maxZoom={19}
+        maxBounds={[[-85, -180], [85, 180]]}
+        maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
         className={`h-full w-full z-10 ${baseMap === 'dark' ? 'dark-map-tiles' : ''}`}
-        worldCopyJump={true}
+        worldCopyJump={false}
       >
         <TileLayer
           key={baseMap}
           url={OSM_TILE_URL}
           attribution={OSM_ATTRIBUTION}
           maxZoom={19}
+          noWrap={true}
+          bounds={[[-85, -180], [85, 180]]}
         />
 
         <MapFlyController
@@ -141,7 +151,7 @@ export default function MapView({
           resetTrigger={resetTrigger}
         />
 
-        {incidents.map((incident) => {
+        {uniqueIncidents.map((incident) => {
           const isSelected = selectedIncident?.id === incident.id;
           const { lat, lng } = incident.coordinates;
           const icon = createIncidentIcon(incident.category, incident.magnitude, isSelected);
@@ -167,7 +177,7 @@ export default function MapView({
               <Popup className="incident-leaflet-popup">
                 <div className="w-72 sm:w-80 p-4 space-y-3 bg-surface-900 text-slate-100 rounded-xl">
                   {/* Popup Header */}
-                  <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                  <div className="flex items-center justify-between gap-2 pb-1">
                     <div className="flex items-center gap-2">
                       <span
                         className={`w-2.5 h-2.5 rounded-full ${
@@ -298,7 +308,7 @@ export default function MapView({
 
       {/* Interactive Legend (Bottom Right) */}
       <div className="absolute bottom-6 right-4 z-20 bg-surface-900/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl shadow-2xl text-xs space-y-2 select-none pointer-events-auto">
-        <div className="font-semibold text-slate-300 uppercase tracking-wider text-[11px] pb-1 border-b border-slate-800">
+        <div className="font-semibold text-slate-300 uppercase tracking-wider text-[11px] pb-1 text-slate-400">
           Incident Markers
         </div>
         <div className="space-y-1.5">

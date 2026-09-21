@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { deduplicateIncidents } from '../utils/deduplicate';
 import {
   Activity,
   Flame,
@@ -45,9 +46,9 @@ export default function Sidebar({
     return `${days}d ago`;
   };
 
-  // Sort incidents
+  // Sort incidents & ensure deduplication
   const sortedIncidents = useMemo(() => {
-    const list = [...filteredIncidents];
+    const list = deduplicateIncidents(filteredIncidents);
     if (sortBy === 'magnitude') {
       return list.sort((a, b) => (b.magnitude || 0) - (a.magnitude || 0));
     }
@@ -62,7 +63,7 @@ export default function Sidebar({
       style={{ height: 'calc(100vh - 4rem)' }}
     >
       {/* Sidebar Header & Close on mobile */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-cyan-400" />
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
@@ -83,7 +84,7 @@ export default function Sidebar({
       </div>
 
       {/* Filter Controls Area */}
-      <div className="p-4 border-b border-slate-800 space-y-4 bg-slate-950/40">
+      <div className="p-4 space-y-4 bg-slate-950/40">
         {/* Category Checkboxes */}
         <div>
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
@@ -227,7 +228,7 @@ export default function Sidebar({
       </div>
 
       {/* Incident List Header & Sorting */}
-      <div className="px-4 py-2.5 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between text-xs">
+      <div className="px-4 py-2.5 bg-slate-950/70 flex items-center justify-between text-xs">
         <span className="text-slate-400 font-medium">
           Incident Feed ({sortedIncidents.length})
         </span>
@@ -243,7 +244,7 @@ export default function Sidebar({
       </div>
 
       {/* Scrollable Incidents Feed */}
-      <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 p-2 space-y-1">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {sortedIncidents.length === 0 ? (
           <div className="p-8 text-center text-slate-500 space-y-2">
             <Compass className="w-8 h-8 mx-auto text-slate-600 animate-pulse" />
@@ -331,7 +332,7 @@ export default function Sidebar({
       </div>
 
       {/* Sidebar Footer */}
-      <div className="p-3 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
+      <div className="p-3 bg-slate-950 text-[11px] text-slate-500 flex items-center justify-between">
         <span className="flex items-center gap-1.5 font-mono">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
           USGS & NASA Feeds

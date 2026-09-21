@@ -3,6 +3,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import MapView from './components/MapView';
 import StatsBar from './components/StatsBar';
+import { deduplicateIncidents } from './utils/deduplicate';
 import { Radio, RefreshCw, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -52,7 +53,8 @@ export default function App() {
 
       const data = await res.json();
       if (data.success) {
-        setIncidents(data.incidents || []);
+        const uniqueData = deduplicateIncidents(data.incidents || []);
+        setIncidents(uniqueData);
         setStats(data.stats || {});
         setCacheInfo(data.cacheInfo || null);
         if (data.cacheInfo?.ttlRemainingSeconds) {
@@ -105,7 +107,8 @@ export default function App() {
 
   // Filtered incidents memo
   const filteredIncidents = useMemo(() => {
-    return incidents.filter((incident) => {
+    const unique = deduplicateIncidents(incidents);
+    return unique.filter((incident) => {
       // 1. Category filter
       if (!categories[incident.category]) {
         return false;

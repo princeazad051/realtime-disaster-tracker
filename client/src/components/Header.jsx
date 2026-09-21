@@ -13,7 +13,7 @@ export default function Header({
   setSidebarOpen
 }) {
   return (
-    <header className="h-16 bg-surface-900/90 backdrop-blur-md border-b border-slate-800 px-4 md:px-6 flex items-center justify-between z-30 select-none">
+    <header className="h-16 bg-surface-900/90 backdrop-blur-md px-4 md:px-6 flex items-center justify-between z-30 select-none">
       {/* Brand & Live status */}
       <div className="flex items-center gap-3">
         <button

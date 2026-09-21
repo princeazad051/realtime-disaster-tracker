@@ -90,8 +90,16 @@ export async function getIncidents(forceRefresh = false) {
   const wildfires = eonetEvents.filter(e => e.category === 'wildfire');
   const storms = eonetEvents.filter(e => e.category === 'storm');
 
+  // Deduplicate incidents strictly by unique ID
+  const uniqueIncidentMap = new Map();
+  [...earthquakes, ...wildfires, ...storms].forEach((item) => {
+    if (item && item.id && !uniqueIncidentMap.has(item.id)) {
+      uniqueIncidentMap.set(item.id, item);
+    }
+  });
+
   // Combined normalized incidents sorted by timestamp desc (freshest first)
-  const allIncidents = [...earthquakes, ...wildfires, ...storms].sort(
+  const allIncidents = Array.from(uniqueIncidentMap.values()).sort(
     (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
   );
 
