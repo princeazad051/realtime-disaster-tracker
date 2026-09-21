@@ -57,12 +57,10 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed md:static inset-y-0 left-0 z-20 w-80 md:w-96 bg-surface-900/95 md:bg-surface-900/85 backdrop-blur-xl border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}
-      style={{ height: 'calc(100vh - 4rem)' }}
+      id="incident-sidebar-panel"
+      className="w-full md:w-96 bg-surface-900/95 md:bg-surface-900/85 backdrop-blur-xl md:border-r md:border-slate-800/40 flex flex-col shrink-0 static md:h-full transition-all"
     >
-      {/* Sidebar Header & Close on mobile */}
+      {/* Sidebar Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-cyan-400" />
@@ -74,12 +72,6 @@ export default function Sidebar({
           <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 font-mono font-medium border border-slate-700">
             {filteredIncidents.length} shown
           </span>
-          <button
-            onClick={onClose}
-            className="md:hidden p-1 text-slate-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
@@ -244,7 +236,7 @@ export default function Sidebar({
       </div>
 
       {/* Scrollable Incidents Feed */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      <div className="max-h-[480px] md:max-h-none md:flex-1 overflow-y-auto p-2 space-y-1">
         {sortedIncidents.length === 0 ? (
           <div className="p-8 text-center text-slate-500 space-y-2">
             <Compass className="w-8 h-8 mx-auto text-slate-600 animate-pulse" />

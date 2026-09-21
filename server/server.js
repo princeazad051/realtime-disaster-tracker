@@ -99,12 +99,20 @@ app.get('/api/incidents', async (req, res) => {
       incidents = incidents.slice(0, 1500);
     }
 
+    // Ensure incidents are strictly deduplicated by unique ID before sending JSON response
+    const seenIds = new Set();
+    const deduplicatedIncidents = incidents.filter((i) => {
+      if (!i || !i.id || seenIds.has(i.id)) return false;
+      seenIds.add(i.id);
+      return true;
+    });
+
     res.json({
       success: true,
-      totalReturned: incidents.length,
+      totalReturned: deduplicatedIncidents.length,
       stats: data.stats,
       cacheInfo: data.cacheInfo,
-      incidents
+      incidents: deduplicatedIncidents
     });
   } catch (err) {
     console.error('[API] Error in /api/incidents:', err);

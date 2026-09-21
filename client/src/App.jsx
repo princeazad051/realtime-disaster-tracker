@@ -4,7 +4,21 @@ import Sidebar from './components/Sidebar';
 import MapView from './components/MapView';
 import StatsBar from './components/StatsBar';
 import { deduplicateIncidents } from './utils/deduplicate';
+import { FALLBACK_INCIDENTS, FALLBACK_STATS } from './utils/fallbackData';
 import { Radio, RefreshCw, AlertCircle } from 'lucide-react';
+
+// Fallback production backend URL (e.g. Render) when VITE_API_BASE_URL is not set on Vercel
+const DEFAULT_BACKEND_URL = 'https://realtime-disaster-tracker.onrender.com';
+
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim() !== '') {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '');
+  }
+  if (import.meta.env.DEV) {
+    return '';
+  }
+  return DEFAULT_BACKEND_URL;
+};
 
 export default function App() {
   const [incidents, setIncidents] = useState([]);
@@ -13,6 +27,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [isFallbackMode, setIsFallbackMode] = useState(false);
+  const [serverStatus, setServerStatus] = useState('idle'); // 'idle' | 'fetching' | 'waking' | 'ready' | 'error'
 
   // Filter states
   const [categories, setCategories] = useState({
@@ -28,7 +44,7 @@ export default function App() {
   // TTL Countdown state
   const [ttlCountdown, setTtlCountdown] = useState(300);
 
-  // Fetch incidents data
+  // Fetch incidents data with Render cold-start detection and non-JSON safety
   const loadIncidents = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setIsRefreshing(true);
@@ -36,39 +52,76 @@ export default function App() {
       setIsLoading(true);
     }
     setError(null);
+    setServerStatus('fetching');
+
+    // 3-second cold start timer for free Render instances
+    const coldStartTimer = setTimeout(() => {
+      setServerStatus('waking');
+    }, 3000);
 
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '') : '';
+      const apiBase = getApiBaseUrl();
       const endpoint = `${apiBase}${isRefresh ? '/api/incidents/refresh' : '/api/incidents'}`;
       const method = isRefresh ? 'POST' : 'GET';
 
       const res = await fetch(endpoint, {
         method,
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
 
+      const contentType = res.headers.get('content-type') || '';
+
+      // Safeguard against Vercel SPA routing returning index.html (200 OK text/html)
+      if (!contentType.includes('application/json')) {
+        throw new Error(
+          `Backend returned non-JSON response (${contentType || 'HTML'}). Verify VITE_API_BASE_URL.`
+        );
+      }
+
       if (!res.ok) {
-        throw new Error(`API error HTTP ${res.status}`);
+        throw new Error(`API error HTTP ${res.status}: ${res.statusText || 'Server Error'}`);
       }
 
       const data = await res.json();
       if (data.success) {
+        clearTimeout(coldStartTimer);
+        setServerStatus('ready');
         const uniqueData = deduplicateIncidents(data.incidents || []);
         setIncidents(uniqueData);
         setStats(data.stats || {});
         setCacheInfo(data.cacheInfo || null);
+        setIsFallbackMode(false);
+        setError(null);
         if (data.cacheInfo?.ttlRemainingSeconds) {
           setTtlCountdown(data.cacheInfo.ttlRemainingSeconds);
         } else {
           setTtlCountdown(300);
         }
       } else {
+        clearTimeout(coldStartTimer);
+        setServerStatus('error');
         throw new Error(data.error || 'Failed to load telemetry data');
       }
     } catch (err) {
-      console.error('[App] Error fetching incidents:', err);
-      setError(err.message || 'Network connection failed');
+      clearTimeout(coldStartTimer);
+      setServerStatus('error');
+      console.warn('[AegisWatch] Failed to fetch live telemetry, using fallback:', err);
+      setError(err.message || 'Unable to connect to telemetry backend');
+      
+      // Never render a blank screen: populate fallback data if no incidents exist yet
+      setIncidents((current) => {
+        if (current.length === 0) {
+          setIsFallbackMode(true);
+          setStats(FALLBACK_STATS);
+          return FALLBACK_INCIDENTS;
+        }
+        return current;
+      });
     } finally {
+      clearTimeout(coldStartTimer);
       setIsLoading(false);
       setIsRefreshing(false);
     }
@@ -149,8 +202,16 @@ export default function App() {
     });
   }, [incidents, categories, minMagnitude, searchQuery]);
 
+  // Handle incident selection with mobile smooth scroll
+  const handleSelectIncident = useCallback((incident) => {
+    setSelectedIncident(incident);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
   return (
-    <div className="h-screen w-screen flex flex-col bg-background overflow-hidden select-none">
+    <div className="min-h-screen md:h-screen w-full flex flex-col bg-background overflow-x-hidden md:overflow-hidden select-none">
       {/* Top Header */}
       <Header
         stats={stats}
@@ -164,11 +225,28 @@ export default function App() {
         setSidebarOpen={setSidebarOpen}
       />
 
-      {/* Main Content: Sidebar + World Map */}
-      <div className="flex-1 flex relative overflow-hidden">
+      {/* Render Cold Start Loading Toast Banner */}
+      {serverStatus === 'waking' && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md pointer-events-auto">
+          <div className="bg-slate-900/95 border border-cyan-500/50 text-slate-100 px-4 py-3 rounded-2xl shadow-2xl shadow-cyan-500/20 backdrop-blur-xl flex items-center gap-3 animate-pulse">
+            <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-cyan-300">
+                Waking up free backend server, please wait a moment...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content: Map & Sidebar Stacked Vertically on Mobile (<768px), Side-by-Side on Desktop */}
+      <div className="flex-1 flex flex-col md:flex-row relative min-h-0 overflow-y-auto md:overflow-hidden">
         {/* Loading Overlay */}
         {isLoading && (
-          <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-md flex flex-col items-center justify-center gap-4 text-center">
+          <div className="absolute inset-0 z-50 bg-background/90 backdrop-blur-md flex flex-col items-center justify-center gap-4 text-center px-4">
             <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
               <Radio className="w-8 h-8 animate-ping" />
             </div>
@@ -177,49 +255,63 @@ export default function App() {
                 Initializing Global Telemetry
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                Aggregating live events from USGS Earthquakes & NASA EONET...
+                {serverStatus === 'waking'
+                  ? 'Waking up free backend server, please wait a moment...'
+                  : 'Aggregating live events from USGS Earthquakes & NASA EONET...'}
               </p>
             </div>
           </div>
         )}
 
-        {/* Error Notification Bar */}
+        {/* Error / Fallback Telemetry Banner */}
         {error && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-red-950/90 border border-red-500/50 text-red-200 px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-3 backdrop-blur-md">
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-            <span className="text-xs font-medium">{error}</span>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 border border-amber-500/50 text-slate-100 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur-md max-w-lg w-[92%] animate-pulse">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-300">
+                {isFallbackMode ? 'Telemetry Standby (Cached Fallback)' : 'Telemetry Connection Notice'}
+              </p>
+              <p className="text-[11px] text-slate-300 truncate">
+                {error}
+              </p>
+            </div>
             <button
               onClick={() => loadIncidents(false)}
-              className="text-xs bg-red-800 hover:bg-red-700 px-2 py-1 rounded text-white font-medium ml-2"
+              className="text-xs bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 px-3 py-1.5 rounded-lg font-medium transition-colors ml-2 shrink-0 flex items-center gap-1.5"
             >
+              <RefreshCw className="w-3 h-3" />
               Retry
             </button>
           </div>
         )}
 
-        {/* Sidebar Controls & Feed */}
-        <Sidebar
-          categories={categories}
-          onToggleCategory={handleToggleCategory}
-          minMagnitude={minMagnitude}
-          onMinMagnitudeChange={setMinMagnitude}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          incidents={incidents}
-          filteredIncidents={filteredIncidents}
-          selectedIncident={selectedIncident}
-          onSelectIncident={setSelectedIncident}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          stats={stats}
-        />
+        {/* Interactive World Map (Top on Mobile with 52vh, Right on Desktop) */}
+        <div className="w-full h-[52vh] min-h-[360px] md:h-full md:flex-1 shrink-0 relative order-1 md:order-2">
+          <MapView
+            incidents={filteredIncidents}
+            selectedIncident={selectedIncident}
+            onSelectIncident={handleSelectIncident}
+          />
+        </div>
 
-        {/* Interactive World Map */}
-        <MapView
-          incidents={filteredIncidents}
-          selectedIncident={selectedIncident}
-          onSelectIncident={setSelectedIncident}
-        />
+        {/* Sidebar Controls & Feed (Beneath Map on Mobile, Pinned Left on Desktop) */}
+        <div className="w-full md:w-96 md:h-full shrink-0 order-2 md:order-1">
+          <Sidebar
+            categories={categories}
+            onToggleCategory={handleToggleCategory}
+            minMagnitude={minMagnitude}
+            onMinMagnitudeChange={setMinMagnitude}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            incidents={incidents}
+            filteredIncidents={filteredIncidents}
+            selectedIncident={selectedIncident}
+            onSelectIncident={handleSelectIncident}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            stats={stats}
+          />
+        </div>
       </div>
 
       {/* Bottom Telemetry Status Bar */}

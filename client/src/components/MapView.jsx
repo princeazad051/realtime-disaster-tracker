@@ -174,8 +174,14 @@ export default function MapView({
                 click: () => onSelectIncident(incident)
               }}
             >
-              <Popup className="incident-leaflet-popup">
-                <div className="w-72 sm:w-80 p-4 space-y-3 bg-surface-900 text-slate-100 rounded-xl">
+              <Popup
+                className="incident-leaflet-popup"
+                autoPan={true}
+                autoPanPadding={[20, 20]}
+                maxWidth={320}
+                minWidth={240}
+              >
+                <div className="w-[calc(100vw-64px)] max-w-[280px] sm:max-w-none sm:w-80 p-3 sm:p-4 space-y-2.5 sm:space-y-3 bg-surface-900 text-slate-100 rounded-xl">
                   {/* Popup Header */}
                   <div className="flex items-center justify-between gap-2 pb-1">
                     <div className="flex items-center gap-2">
@@ -284,11 +290,11 @@ export default function MapView({
       </MapContainer>
 
       {/* Floating Map Controls & Legend */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+      <div className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-20 flex flex-col gap-1.5 sm:gap-2">
         {/* Reset View Button */}
         <button
           onClick={() => setResetTrigger((prev) => prev + 1)}
-          className="p-2.5 rounded-xl bg-surface-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/60 shadow-xl backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 text-xs font-medium"
+          className="p-2 sm:p-2.5 rounded-xl bg-surface-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/60 shadow-xl backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 text-xs font-medium"
           title="Reset Global View"
         >
           <Compass className="w-4 h-4 text-cyan-400" />
@@ -298,7 +304,7 @@ export default function MapView({
         {/* Base Layer Switcher */}
         <button
           onClick={() => setBaseMap((prev) => (prev === 'dark' ? 'streets' : 'dark'))}
-          className="p-2.5 rounded-xl bg-surface-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/60 shadow-xl backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 text-xs font-medium"
+          className="p-2 sm:p-2.5 rounded-xl bg-surface-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/60 shadow-xl backdrop-blur-md transition-all active:scale-95 flex items-center gap-1.5 text-xs font-medium"
           title="Toggle Map Style"
         >
           <Layers className="w-4 h-4 text-sky-400" />
@@ -307,8 +313,8 @@ export default function MapView({
       </div>
 
       {/* Interactive Legend (Bottom Right) */}
-      <div className="absolute bottom-6 right-4 z-20 bg-surface-900/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl shadow-2xl text-xs space-y-2 select-none pointer-events-auto">
-        <div className="font-semibold text-slate-300 uppercase tracking-wider text-[11px] pb-1 text-slate-400">
+      <div className="absolute bottom-2.5 right-2.5 sm:bottom-6 sm:right-4 z-20 bg-surface-900/95 backdrop-blur-md border border-slate-800 p-2 sm:p-3 rounded-xl shadow-2xl text-[11px] sm:text-xs space-y-1 sm:space-y-1.5 select-none pointer-events-auto">
+        <div className="font-semibold uppercase tracking-wider text-[10px] sm:text-[11px] pb-0.5 text-slate-400">
           Incident Markers
         </div>
         <div className="space-y-1.5">
